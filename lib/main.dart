@@ -68,9 +68,11 @@ class _MyHomePageState extends State<MyHomePage> {
       onConnect: _onConnect,
       onWalletSwitchNetwork: _onSwitchNetwork,
     );
-    walletAddress = "0x9D729F64148C49A08Fdf07590553625f43Eea9e5";
+    walletAddress = "0x783DEC73f73AA01EbdFafE0038Dc18BBAFCAAF7F";
+    // walletAddress = "0x9D729F64148C49A08Fdf07590553625f43Eea9e5";
     privateKey =
-        "edc4f9969264c8c924f009f592a45b8b8eab5460f4b0c68e7e45d8182780a979";
+        "ee8b67633761cf2e9d537a27149f2b727b861c014151269b856cbafd6d47ee79";
+    // "edc4f9969264c8c924f009f592a45b8b8eab5460f4b0c68e7e45d8182780a979";
     _prefs = await SharedPreferences.getInstance();
     setState(() {
       isprefs = true;
@@ -672,7 +674,7 @@ class _MyHomePageState extends State<MyHomePage> {
       to: EthereumAddress.fromHex(ethereumTransaction.to!),
       maxGas: ethereumTransaction.gasLimit != null
           ? int.tryParse(ethereumTransaction.gasLimit!)
-          : 100000,
+          : 300000,
       gasPrice: ethereumTransaction.gasPrice != null
           ? EtherAmount.inWei(BigInt.parse(ethereumTransaction.gasPrice!))
           : null,
