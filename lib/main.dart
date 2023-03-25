@@ -11,7 +11,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -23,16 +23,16 @@ class MyApp extends StatelessWidget {
       title: 'Wallet Connect',
       theme: ThemeData(
         primarySwatch: Colors.blue,
+        colorScheme: const ColorScheme.dark(),
       ),
-      home: const MyHomePage(title: 'Wallet Connect'),
+      debugShowCheckedModeBanner: false,
+      home: const MyHomePage(),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key, required this.title}) : super(key: key);
-
-  final String title;
+  const MyHomePage({Key? key}) : super(key: key);
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
@@ -75,21 +75,22 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       isprefs = true;
     });
-    _prefs.setInt('count', _prefs.getInt('count') ?? 0);
-    if (_prefs.getInt('count')! < 0) {
-      await _prefs.setInt('count', 0);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: Text("Wallet Connect".toUpperCase()),
+        centerTitle: true,
       ),
+      backgroundColor: Colors.black38,
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          const SizedBox(
+            height: 25,
+          ),
           const Padding(
             padding: EdgeInsets.all(8.0),
             child: Text(
@@ -100,14 +101,16 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
           ),
+          const SizedBox(
+            height: 15,
+          ),
           Expanded(
             flex: 6,
             child: isprefs
                 ? ListView.builder(
-                    itemCount: _prefs.getKeys().skip(1).length,
+                    itemCount: _prefs.getKeys().length,
                     itemBuilder: (context, index) {
-                      var val = _prefs.getKeys().elementAt(index + 1);
-                      final key = _prefs.getString(val);
+                      final key = _prefs.getString('session');
                       var session = WCSessionStore.fromJson(jsonDecode(key!));
                       return ListTile(
                         title: Text(session.remotePeerMeta.name),
@@ -121,26 +124,11 @@ class _MyHomePageState extends State<MyHomePage> {
                             ? TextButton(
                                 onPressed: () async {
                                   _wcClient.killSession();
-                                  await _prefs.remove(val);
-
-                                  await _prefs.setInt(
-                                    'count',
-                                    _prefs.getInt('count')! - 1,
-                                  );
-                                  if (_prefs.getInt('count')! <= 0) {
-                                    await _prefs.setInt('count', 0);
-                                  }
-                                  // setState(() {
-                                  //   wcClients.removeAt(index);
-                                  // });
                                 },
                                 child: const Text('Disconnect'),
                               )
                             : TextButton(
                                 onPressed: () async {
-                                  // if (_wcClient.isConnected == true) {
-                                  //   _wcClient.killSession();
-                                  // }
                                   await _wcClient.connectFromSessionStore(
                                     session,
                                   );
@@ -161,6 +149,13 @@ class _MyHomePageState extends State<MyHomePage> {
             flex: 1,
             child: Center(
               child: ElevatedButton(
+                style: ButtonStyle(
+                  shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+                    RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18.0),
+                    ),
+                  ),
+                ),
                 onPressed: () async {
                   var response = await FlutterBarcodeScanner.scanBarcode(
                     '#ff6666',
@@ -171,8 +166,13 @@ class _MyHomePageState extends State<MyHomePage> {
                   _qrScanHandler(response);
                 },
                 child: const Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Text('Scan QR Code'),
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  child: Text(
+                    'Scan QR Code',
+                    style: TextStyle(
+                      fontSize: 22,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -197,22 +197,6 @@ class _MyHomePageState extends State<MyHomePage> {
       _wcClient.connectNewSession(session: session, peerMeta: peerMeta);
     }
   }
-
-  // _connectToPreviousSession() {
-  //   final _sessionSaved = _prefs.getString('session');
-  //   debugPrint('_sessionSaved $_sessionSaved');
-  //   _sessionStore = _sessionSaved != null
-  //       ? WCSessionStore.fromJson(jsonDecode(_sessionSaved))
-  //       : null;
-  //   if (_sessionStore != null) {
-  //     debugPrint('_sessionStore $_sessionStore');
-  //     _wcClient.connectFromSessionStore(_sessionStore!);
-  //   } else {
-  //     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-  //       content: Text('No previous session found.'),
-  //     ));
-  //   }
-  // }
 
   _onConnect() {
     setState(() {
@@ -239,9 +223,8 @@ class _MyHomePageState extends State<MyHomePage> {
             chainId: chainId,
           );
           _sessionStore = _wcClient.sessionStore;
-          await _prefs.setString('${_prefs.getInt('count')}',
-              jsonEncode(_wcClient.sessionStore.toJson()));
-          await _prefs.setInt('count', _prefs.getInt('count')! + 1);
+          await _prefs.setString(
+              'session', jsonEncode(_wcClient.sessionStore.toJson()));
           setState(() {});
           Navigator.pop(context);
         },
@@ -394,6 +377,17 @@ class _MyHomePageState extends State<MyHomePage> {
     required VoidCallback onReject,
   }) async {
     BigInt gasPrice = BigInt.parse(ethereumTransaction.gasPrice ?? '0');
+    EtherAmount walletBalance = await _web3client.getBalance(
+      EthereumAddress.fromHex(walletAddress),
+    );
+    // if (double.parse(walletBalance.getInEther.toString()) <
+    //     EthConversions.weiToEthUnTrimmed(
+    //         BigInt.parse(ethereumTransaction.value ?? '0'), 18)) {
+    //   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+    //     content: Text('Insufficient Balance'),
+    //   ));
+    //   return;
+    // }
     if (gasPrice == BigInt.zero) {
       gasPrice = await _web3client.estimateGas();
     }
@@ -678,7 +672,7 @@ class _MyHomePageState extends State<MyHomePage> {
       to: EthereumAddress.fromHex(ethereumTransaction.to!),
       maxGas: ethereumTransaction.gasLimit != null
           ? int.tryParse(ethereumTransaction.gasLimit!)
-          : null,
+          : 100000,
       gasPrice: ethereumTransaction.gasPrice != null
           ? EtherAmount.inWei(BigInt.parse(ethereumTransaction.gasPrice!))
           : null,

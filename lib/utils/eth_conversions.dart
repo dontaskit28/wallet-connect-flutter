@@ -17,7 +17,6 @@ class EthConversions {
       return double.parse(db.toStringAsFixed(6));
     } else {
       double db = amount / BigInt.from(10).pow(decimal);
-      print("db $db");
       return double.parse(db.toStringAsFixed(6));
     }
   }
