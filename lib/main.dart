@@ -4,7 +4,6 @@ import 'package:eth_sig_util/eth_sig_util.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wallet_connect/wallet_connect.dart';
-import 'session_request_view.dart';
 import 'eth_conversions.dart';
 import 'package:web3dart/crypto.dart';
 import 'package:web3dart/web3dart.dart';
