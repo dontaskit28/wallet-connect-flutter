@@ -82,13 +82,11 @@ class _MyHomePageState extends State<MyHomePage> {
         title: const Text("Active Connections"),
         centerTitle: true,
       ),
-      backgroundColor: Colors.black38,
+      backgroundColor: Colors.black,
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const SizedBox(
-            height: 25,
-          ),
           Expanded(
             flex: 6,
             child: isprefs
@@ -379,156 +377,178 @@ class _MyHomePageState extends State<MyHomePage> {
     if (gasPrice == BigInt.zero) {
       gasPrice = await _web3client.estimateGas();
     }
-    showDialog(
+    showModalBottomSheet(
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(20),
+        ),
+      ),
       context: context,
       builder: (_) {
-        return SimpleDialog(
-          title: Column(
+        return Padding(
+          padding: const EdgeInsets.all(15),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              if (_wcClient.remotePeerMeta!.icons.isNotEmpty)
-                Container(
-                  height: 100.0,
-                  width: 100.0,
-                  padding: const EdgeInsets.only(bottom: 8.0),
-                  child: Image.network(_wcClient.remotePeerMeta!.icons.first),
-                ),
-              Text(
-                _wcClient.remotePeerMeta!.name,
-                style: const TextStyle(
-                  fontWeight: FontWeight.normal,
-                  fontSize: 20.0,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const SizedBox(
+                    height: 30,
+                  ),
+                  if (_wcClient.remotePeerMeta!.icons.isNotEmpty)
+                    Container(
+                      height: 100.0,
+                      width: 100.0,
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child:
+                          Image.network(_wcClient.remotePeerMeta!.icons.first),
+                    ),
+                  const SizedBox(height: 10),
+                  Text(
+                    _wcClient.remotePeerMeta!.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.normal,
+                      fontSize: 20.0,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18.0,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0, top: 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Receipient',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16.0,
+                          ),
+                        ),
+                        const SizedBox(height: 8.0),
+                        Text(
+                          '${ethereumTransaction.to}',
+                          style: const TextStyle(fontSize: 12.0),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Transaction Fee',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16.0,
+                          ),
+                        ),
+                        Text(
+                          '${EthConversions.weiToEthUnTrimmed(gasPrice * BigInt.parse(ethereumTransaction.gas ?? '0'), 18)} ETH',
+                          style: const TextStyle(fontSize: 16.0),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Transaction Amount',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16.0,
+                          ),
+                        ),
+                        Text(
+                          '${EthConversions.weiToEthUnTrimmed(BigInt.parse(ethereumTransaction.value ?? '0'), 18)} ETH',
+                          style: const TextStyle(fontSize: 16.0),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Theme(
+                    data: Theme.of(context)
+                        .copyWith(dividerColor: Colors.transparent),
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: ExpansionTile(
+                        tilePadding: EdgeInsets.zero,
+                        title: const Text(
+                          'Data',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16.0,
+                          ),
+                        ),
+                        children: [
+                          Text(
+                            '${ethereumTransaction.data}',
+                            style: const TextStyle(fontSize: 16.0),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: onReject,
+                      child: const Padding(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                        child: Text('REJECT'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16.0),
+                  Expanded(
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.black,
+                        backgroundColor:
+                            Theme.of(context).colorScheme.secondary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: onConfirm,
+                      child: const Padding(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                        child: Text('APPROVE'),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          contentPadding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 16.0),
-          children: [
-            Container(
-              alignment: Alignment.center,
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18.0,
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Receipient',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16.0,
-                    ),
-                  ),
-                  const SizedBox(height: 8.0),
-                  Text(
-                    '${ethereumTransaction.to}',
-                    style: const TextStyle(fontSize: 16.0),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Row(
-                children: [
-                  const Expanded(
-                    flex: 2,
-                    child: Text(
-                      'Transaction Fee',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16.0,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      '${EthConversions.weiToEthUnTrimmed(gasPrice * BigInt.parse(ethereumTransaction.gas ?? '0'), 18)} ETH',
-                      style: const TextStyle(fontSize: 16.0),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Row(
-                children: [
-                  const Expanded(
-                    flex: 2,
-                    child: Text(
-                      'Transaction Amount',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16.0,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      '${EthConversions.weiToEthUnTrimmed(BigInt.parse(ethereumTransaction.value ?? '0'), 18)} ETH',
-                      style: const TextStyle(fontSize: 16.0),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Theme(
-              data:
-                  Theme.of(context).copyWith(dividerColor: Colors.transparent),
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: ExpansionTile(
-                  tilePadding: EdgeInsets.zero,
-                  title: const Text(
-                    'Data',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16.0,
-                    ),
-                  ),
-                  children: [
-                    Text(
-                      '${ethereumTransaction.data}',
-                      style: const TextStyle(fontSize: 16.0),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.black,
-                      backgroundColor: Theme.of(context).colorScheme.secondary,
-                    ),
-                    onPressed: onConfirm,
-                    child: const Text('CONFIRM'),
-                  ),
-                ),
-                const SizedBox(width: 16.0),
-                Expanded(
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.black,
-                      backgroundColor: Theme.of(context).colorScheme.secondary,
-                    ),
-                    onPressed: onReject,
-                    child: const Text('REJECT'),
-                  ),
-                ),
-              ],
-            ),
-          ],
         );
       },
     );
