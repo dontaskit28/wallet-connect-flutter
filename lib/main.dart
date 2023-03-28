@@ -47,7 +47,7 @@ class _MyHomePageState extends State<MyHomePage> {
   late WCClient _wcClient;
   late SharedPreferences _prefs;
   late String walletAddress, privateKey;
-  final _web3client = Web3Client(rpcUri, http.Client());
+  Web3Client _web3client = Web3Client(rpcUri, http.Client());
   bool isprefs = false;
   bool isconnected = false;
 
@@ -275,7 +275,11 @@ class _MyHomePageState extends State<MyHomePage> {
                           onPressed: () async {
                             _wcClient.approveSession(
                               accounts: [walletAddress],
-                              chainId: 5,
+                              chainId: Network.ethereumGoerli.chainId,
+                            );
+                            _web3client = Web3Client(
+                              Network.ethereumGoerli.rpc,
+                              http.Client(),
                             );
                             await _prefs.setString('session',
                                 jsonEncode(_wcClient.sessionStore.toJson()));
