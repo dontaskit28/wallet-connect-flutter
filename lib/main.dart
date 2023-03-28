@@ -651,6 +651,152 @@ class _MyHomePageState extends State<MyHomePage> {
     int id,
     WCEthereumSignMessage ethereumSignMessage,
   ) {
+    showModalBottomSheet(
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(20),
+        ),
+      ),
+      context: context,
+      isScrollControlled: true,
+      builder: (_) {
+        return Wrap(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(15),
+              child: Column(
+                children: [
+                  const SizedBox(
+                    height: 20,
+                  ),
+                  if (_wcClient.remotePeerMeta!.icons.isNotEmpty)
+                    Container(
+                      height: 100.0,
+                      width: 100.0,
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child:
+                          Image.network(_wcClient.remotePeerMeta!.icons.first),
+                    ),
+                  Text(
+                    _wcClient.remotePeerMeta!.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.normal,
+                      fontSize: 20.0,
+                    ),
+                  ),
+                  Container(
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: const Text(
+                      'Sign Message',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18.0,
+                      ),
+                    ),
+                  ),
+                  Theme(
+                    data: Theme.of(context)
+                        .copyWith(dividerColor: Colors.transparent),
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: ExpansionTile(
+                        tilePadding: EdgeInsets.zero,
+                        title: const Text(
+                          'Message',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16.0,
+                          ),
+                        ),
+                        children: [
+                          Text(
+                            ethereumSignMessage.data!,
+                            style: const TextStyle(fontSize: 16.0),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.black,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: () {
+                            _wcClient.rejectRequest(id: id);
+                            Navigator.pop(context);
+                          },
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 15,
+                              vertical: 10,
+                            ),
+                            child: Text('REJECT'),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16.0),
+                      Expanded(
+                        child: TextButton(
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.black,
+                            backgroundColor:
+                                Theme.of(context).colorScheme.secondary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: () async {
+                            String signedDataHex;
+                            if (ethereumSignMessage.type ==
+                                WCSignType.TYPED_MESSAGE) {
+                              signedDataHex = EthSigUtil.signTypedData(
+                                privateKey: privateKey,
+                                jsonData: ethereumSignMessage.data!,
+                                version: TypedDataVersion.V4,
+                              );
+                            } else {
+                              final creds = EthPrivateKey.fromHex(privateKey);
+                              final encodedMessage =
+                                  hexToBytes(ethereumSignMessage.data!);
+                              final signedData = await creds
+                                  .signPersonalMessage(encodedMessage);
+                              signedDataHex =
+                                  bytesToHex(signedData, include0x: true);
+                            }
+                            debugPrint('SIGNED $signedDataHex');
+                            _wcClient.approveRequest<String>(
+                              id: id,
+                              result: signedDataHex,
+                            );
+                            Navigator.pop(context);
+                          },
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 15,
+                              vertical: 10,
+                            ),
+                            child: Text('SIGN'),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+    return;
     showDialog(
       context: context,
       builder: (_) {
