@@ -1,10 +1,11 @@
+// ignore_for_file: depend_on_referenced_packages, use_build_context_synchronously
 import 'dart:convert';
 import 'package:eth_sig_util/eth_sig_util.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wallet_connect/wallet_connect.dart';
-import 'widgets/session_request_view.dart';
-import 'utils/eth_conversions.dart';
+import 'session_request_view.dart';
+import 'eth_conversions.dart';
 import 'package:web3dart/crypto.dart';
 import 'package:web3dart/web3dart.dart';
 import 'package:http/http.dart' as http;
@@ -44,11 +45,8 @@ class _MyHomePageState extends State<MyHomePage> {
   late WCClient _wcClient;
   late SharedPreferences _prefs;
   late String walletAddress, privateKey;
-  bool connected = false;
-  WCSessionStore? _sessionStore;
   final _web3client = Web3Client(rpcUri, http.Client());
   bool isprefs = false;
-  List<WCClient> wcClients = [];
 
   @override
   void initState() {
@@ -69,10 +67,8 @@ class _MyHomePageState extends State<MyHomePage> {
       onWalletSwitchNetwork: _onSwitchNetwork,
     );
     walletAddress = "0x783DEC73f73AA01EbdFafE0038Dc18BBAFCAAF7F";
-    // walletAddress = "0x9D729F64148C49A08Fdf07590553625f43Eea9e5";
     privateKey =
         "ee8b67633761cf2e9d537a27149f2b727b861c014151269b856cbafd6d47ee79";
-    // "edc4f9969264c8c924f009f592a45b8b8eab5460f4b0c68e7e45d8182780a979";
     _prefs = await SharedPreferences.getInstance();
     setState(() {
       isprefs = true;
@@ -83,7 +79,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Wallet Connect".toUpperCase()),
+        title: const Text("Active Connections"),
         centerTitle: true,
       ),
       backgroundColor: Colors.black38,
@@ -92,19 +88,6 @@ class _MyHomePageState extends State<MyHomePage> {
         children: [
           const SizedBox(
             height: 25,
-          ),
-          const Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Text(
-              "Active Connections",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 22,
-              ),
-            ),
-          ),
-          const SizedBox(
-            height: 15,
           ),
           Expanded(
             flex: 6,
@@ -134,9 +117,6 @@ class _MyHomePageState extends State<MyHomePage> {
                                   await _wcClient.connectFromSessionStore(
                                     session,
                                   );
-                                  setState(() {
-                                    connected = true;
-                                  });
                                 },
                                 child: const Text('Connect'),
                               ),
@@ -189,26 +169,31 @@ class _MyHomePageState extends State<MyHomePage> {
       final session = WCSession.from(value);
       debugPrint('session $session');
       final peerMeta = WCPeerMeta(
-        name: "Example Wallet",
-        url: "https://example.wallet",
-        description: "Example Wallet",
+        name: "Apex Wallet",
+        url: "https://apex.wallet",
+        description: "Apex Wallet",
         icons: [
           "https://gblobscdn.gitbook.com/spaces%2F-LJJeCjcLrr53DcT1Ml7%2Favatar.png"
         ],
       );
       _wcClient.connectNewSession(session: session, peerMeta: peerMeta);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Invalid URL"),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
   _onConnect() {
-    setState(() {
-      connected = true;
-    });
+    setState(() {});
   }
 
   _onSwitchNetwork(int id, int chainId) async {
     await _wcClient.updateSession(chainId: chainId);
-    _wcClient.approveRequest<Null>(id: id, result: null);
+    _wcClient.approveRequest<void>(id: id, result: null);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text('Changed network to $chainId.'),
     ));
@@ -224,10 +209,15 @@ class _MyHomePageState extends State<MyHomePage> {
             accounts: [walletAddress],
             chainId: chainId,
           );
-          _sessionStore = _wcClient.sessionStore;
           await _prefs.setString(
               'session', jsonEncode(_wcClient.sessionStore.toJson()));
           setState(() {});
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Connected"),
+              backgroundColor: Colors.green,
+            ),
+          );
           Navigator.pop(context);
         },
         onReject: () {
@@ -239,9 +229,6 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   _onSessionError(dynamic message) {
-    setState(() {
-      connected = false;
-    });
     showDialog(
       context: context,
       builder: (_) {
@@ -257,7 +244,7 @@ class _MyHomePageState extends State<MyHomePage> {
               children: [
                 TextButton(
                   style: TextButton.styleFrom(
-                    foregroundColor: Colors.white,
+                    foregroundColor: Colors.black,
                     backgroundColor: Theme.of(context).colorScheme.secondary,
                   ),
                   onPressed: () {
@@ -275,9 +262,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   _onSessionClosed(int? code, String? reason) {
     _prefs.remove('session');
-    setState(() {
-      connected = false;
-    });
+    setState(() {});
     showDialog(
       context: context,
       builder: (_) {
@@ -298,7 +283,7 @@ class _MyHomePageState extends State<MyHomePage> {
               children: [
                 TextButton(
                   style: TextButton.styleFrom(
-                    foregroundColor: Colors.white,
+                    foregroundColor: Colors.black,
                     backgroundColor: Theme.of(context).colorScheme.secondary,
                   ),
                   onPressed: () {
@@ -351,18 +336,29 @@ class _MyHomePageState extends State<MyHomePage> {
       ethereumTransaction: ethereumTransaction,
       title: 'Send Transaction',
       onConfirm: () async {
-        final creds = EthPrivateKey.fromHex(privateKey);
-        final txhash = await _web3client.sendTransaction(
-          creds,
-          _wcEthTxToWeb3Tx(ethereumTransaction),
-          chainId: _wcClient.chainId!,
-        );
-        debugPrint('txhash $txhash');
-        _wcClient.approveRequest<String>(
-          id: id,
-          result: txhash,
-        );
-        Navigator.pop(context);
+        try {
+          final creds = EthPrivateKey.fromHex(privateKey);
+          final txhash = await _web3client.sendTransaction(
+            creds,
+            _wcEthTxToWeb3Tx(ethereumTransaction),
+            chainId: _wcClient.chainId!,
+          );
+          debugPrint('txhash $txhash');
+          _wcClient.approveRequest<String>(
+            id: id,
+            result: txhash,
+          );
+        } catch (e) {
+          _wcClient.rejectRequest(id: id);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Transaction Failed: $e"),
+              backgroundColor: Colors.red,
+            ),
+          );
+        } finally {
+          Navigator.pop(context);
+        }
       },
       onReject: () {
         _wcClient.rejectRequest(id: id);
@@ -379,21 +375,10 @@ class _MyHomePageState extends State<MyHomePage> {
     required VoidCallback onReject,
   }) async {
     BigInt gasPrice = BigInt.parse(ethereumTransaction.gasPrice ?? '0');
-    EtherAmount walletBalance = await _web3client.getBalance(
-      EthereumAddress.fromHex(walletAddress),
-    );
-    // if (double.parse(walletBalance.getInEther.toString()) <
-    //     EthConversions.weiToEthUnTrimmed(
-    //         BigInt.parse(ethereumTransaction.value ?? '0'), 18)) {
-    //   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-    //     content: Text('Insufficient Balance'),
-    //   ));
-    //   return;
-    // }
+
     if (gasPrice == BigInt.zero) {
       gasPrice = await _web3client.estimateGas();
     }
-    // ignore: use_build_context_synchronously
     showDialog(
       context: context,
       builder: (_) {
@@ -523,7 +508,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 Expanded(
                   child: TextButton(
                     style: TextButton.styleFrom(
-                      foregroundColor: Colors.white,
+                      foregroundColor: Colors.black,
                       backgroundColor: Theme.of(context).colorScheme.secondary,
                     ),
                     onPressed: onConfirm,
@@ -534,7 +519,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 Expanded(
                   child: TextButton(
                     style: TextButton.styleFrom(
-                      foregroundColor: Colors.white,
+                      foregroundColor: Colors.black,
                       backgroundColor: Theme.of(context).colorScheme.secondary,
                     ),
                     onPressed: onReject,
@@ -616,7 +601,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 Expanded(
                   child: TextButton(
                     style: TextButton.styleFrom(
-                      foregroundColor: Colors.white,
+                      foregroundColor: Colors.black,
                       backgroundColor: Theme.of(context).colorScheme.secondary,
                     ),
                     onPressed: () async {
@@ -650,7 +635,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 Expanded(
                   child: TextButton(
                     style: TextButton.styleFrom(
-                      foregroundColor: Colors.white,
+                      foregroundColor: Colors.black,
                       backgroundColor: Theme.of(context).colorScheme.secondary,
                     ),
                     onPressed: () {

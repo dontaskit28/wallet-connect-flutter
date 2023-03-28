@@ -47,41 +47,30 @@ class _SessionRequestViewState extends State<SessionRequestView> {
             padding: const EdgeInsets.only(bottom: 8.0),
             child: Text('Connection to ${widget.peerMeta.url}'),
           ),
-        // TextField(
-        //   onChanged: (v) => setState(() {
-        //     chainId = v;
-        //   }),
-        //   keyboardType: TextInputType.number,
-        //   decoration: InputDecoration(
-        //     border: OutlineInputBorder(),
-        //     label: Text('Enter Chain Id'),
-        //     hintText: '(Default: 1)',
-        //   ),
-        // ),
         Row(
           children: [
             Expanded(
               child: TextButton(
                 style: TextButton.styleFrom(
-                  foregroundColor: Colors.white,
+                  foregroundColor: Colors.black,
                   backgroundColor: Theme.of(context).colorScheme.secondary,
                 ),
                 onPressed: () {
                   widget.onApprove(
                       int.tryParse(chainId) != null ? int.parse(chainId) : 5);
                 },
-                child: Text('APPROVE'),
+                child: const Text('APPROVE'),
               ),
             ),
             const SizedBox(width: 16.0),
             Expanded(
               child: TextButton(
                 style: TextButton.styleFrom(
-                  foregroundColor: Colors.white,
+                  foregroundColor: Colors.black,
                   backgroundColor: Theme.of(context).colorScheme.secondary,
                 ),
                 onPressed: widget.onReject,
-                child: Text('REJECT'),
+                child: const Text('REJECT'),
               ),
             ),
           ],
