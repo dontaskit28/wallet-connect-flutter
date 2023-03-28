@@ -591,6 +591,29 @@ class _MyHomePageState extends State<MyHomePage> {
                           child: ExpansionTile(
                             tilePadding: EdgeInsets.zero,
                             title: const Text(
+                              'Changes',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16.0,
+                              ),
+                            ),
+                            children: [
+                              Text(
+                                '${response.changes}',
+                                style: const TextStyle(fontSize: 16.0),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Theme(
+                        data: Theme.of(context)
+                            .copyWith(dividerColor: Colors.transparent),
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: ExpansionTile(
+                            tilePadding: EdgeInsets.zero,
+                            title: const Text(
                               'Data',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -647,6 +670,9 @@ class _MyHomePageState extends State<MyHomePage> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(
+                    height: 20,
                   ),
                 ],
               ),
