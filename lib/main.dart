@@ -3,12 +3,15 @@ import 'dart:convert';
 import 'package:eth_sig_util/eth_sig_util.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:simple_wallet/simulation.dart';
 import 'package:wallet_connect/wallet_connect.dart';
 import 'eth_conversions.dart';
 import 'package:web3dart/crypto.dart';
 import 'package:web3dart/web3dart.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
+
+import 'network.dart';
 
 void main() {
   runApp(const MyApp());
@@ -458,6 +461,21 @@ class _MyHomePageState extends State<MyHomePage> {
     if (gasPrice == BigInt.zero) {
       gasPrice = await _web3client.estimateGas();
     }
+
+    SimulationResponse response = await simulateTransaction(
+      Network.ethereumGoerli,
+      EthereumAddress.fromHex(ethereumTransaction.from),
+      _wcEthTxToWeb3Tx(ethereumTransaction),
+    );
+    if (response.error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Transaction Failed: ${response.error}"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
     showModalBottomSheet(
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
@@ -540,7 +558,7 @@ class _MyHomePageState extends State<MyHomePage> {
                               ),
                             ),
                             Text(
-                              '${EthConversions.weiToEthUnTrimmed(gasPrice * BigInt.parse(ethereumTransaction.gas ?? '0'), 18)} ETH',
+                              '${EthConversions.weiToEthUnTrimmed(BigInt.parse(response.gasUsed?.substring(2) ?? '0', radix: 16) * gasPrice, 18)} ETH',
                               style: const TextStyle(fontSize: 16.0),
                             ),
                           ],
@@ -783,120 +801,6 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                 ],
               ),
-            ),
-          ],
-        );
-      },
-    );
-    return;
-    showDialog(
-      context: context,
-      builder: (_) {
-        return SimpleDialog(
-          title: Column(
-            children: [
-              if (_wcClient.remotePeerMeta!.icons.isNotEmpty)
-                Container(
-                  height: 100.0,
-                  width: 100.0,
-                  padding: const EdgeInsets.only(bottom: 8.0),
-                  child: Image.network(_wcClient.remotePeerMeta!.icons.first),
-                ),
-              Text(
-                _wcClient.remotePeerMeta!.name,
-                style: const TextStyle(
-                  fontWeight: FontWeight.normal,
-                  fontSize: 20.0,
-                ),
-              ),
-            ],
-          ),
-          contentPadding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 16.0),
-          children: [
-            Container(
-              alignment: Alignment.center,
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: const Text(
-                'Sign Message',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18.0,
-                ),
-              ),
-            ),
-            Theme(
-              data:
-                  Theme.of(context).copyWith(dividerColor: Colors.transparent),
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: ExpansionTile(
-                  tilePadding: EdgeInsets.zero,
-                  title: const Text(
-                    'Message',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16.0,
-                    ),
-                  ),
-                  children: [
-                    Text(
-                      ethereumSignMessage.data!,
-                      style: const TextStyle(fontSize: 16.0),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.black,
-                      backgroundColor: Theme.of(context).colorScheme.secondary,
-                    ),
-                    onPressed: () async {
-                      String signedDataHex;
-                      if (ethereumSignMessage.type ==
-                          WCSignType.TYPED_MESSAGE) {
-                        signedDataHex = EthSigUtil.signTypedData(
-                          privateKey: privateKey,
-                          jsonData: ethereumSignMessage.data!,
-                          version: TypedDataVersion.V4,
-                        );
-                      } else {
-                        final creds = EthPrivateKey.fromHex(privateKey);
-                        final encodedMessage =
-                            hexToBytes(ethereumSignMessage.data!);
-                        final signedData =
-                            await creds.signPersonalMessage(encodedMessage);
-                        signedDataHex = bytesToHex(signedData, include0x: true);
-                      }
-                      debugPrint('SIGNED $signedDataHex');
-                      _wcClient.approveRequest<String>(
-                        id: id,
-                        result: signedDataHex,
-                      );
-                      Navigator.pop(context);
-                    },
-                    child: const Text('SIGN'),
-                  ),
-                ),
-                const SizedBox(width: 16.0),
-                Expanded(
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.black,
-                      backgroundColor: Theme.of(context).colorScheme.secondary,
-                    ),
-                    onPressed: () {
-                      _wcClient.rejectRequest(id: id);
-                      Navigator.pop(context);
-                    },
-                    child: const Text('REJECT'),
-                  ),
-                ),
-              ],
             ),
           ],
         );
