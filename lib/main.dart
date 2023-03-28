@@ -87,8 +87,22 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Active Connections"),
-        centerTitle: true,
+        title: const Text("Wallet Connect"),
+        actions: [
+          IconButton(
+            onPressed: () async {
+              var response = await FlutterBarcodeScanner.scanBarcode(
+                '#ff6666',
+                'Cancel',
+                true,
+                ScanMode.QR,
+              );
+              _qrScanHandler(response);
+            },
+            icon: const Icon(Icons.qr_code_scanner),
+          ),
+          const SizedBox(width: 15),
+        ],
       ),
       backgroundColor: Colors.black,
       body: Column(
@@ -132,38 +146,6 @@ class _MyHomePageState extends State<MyHomePage> {
                 : const Center(
                     child: CircularProgressIndicator(),
                   ),
-          ),
-          Expanded(
-            flex: 1,
-            child: Center(
-              child: ElevatedButton(
-                style: ButtonStyle(
-                  shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-                    RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18.0),
-                    ),
-                  ),
-                ),
-                onPressed: () async {
-                  var response = await FlutterBarcodeScanner.scanBarcode(
-                    '#ff6666',
-                    'Cancel',
-                    true,
-                    ScanMode.QR,
-                  );
-                  _qrScanHandler(response);
-                },
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  child: Text(
-                    'Scan QR Code',
-                    style: TextStyle(
-                      fontSize: 22,
-                    ),
-                  ),
-                ),
-              ),
-            ),
           ),
         ],
       ),
