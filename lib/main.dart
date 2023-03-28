@@ -46,6 +46,7 @@ class _MyHomePageState extends State<MyHomePage> {
   late String walletAddress, privateKey;
   final _web3client = Web3Client(rpcUri, http.Client());
   bool isprefs = false;
+  bool isconnected = false;
 
   @override
   void initState() {
@@ -73,6 +74,9 @@ class _MyHomePageState extends State<MyHomePage> {
       final key = _prefs.getString('session');
       var session = WCSessionStore.fromJson(jsonDecode(key!));
       await _wcClient.connectFromSessionStore(session);
+      setState(() {
+        isconnected = true;
+      });
     }
     setState(() {
       isprefs = true;
@@ -107,7 +111,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             session.remotePeerMeta.icons.first,
                           ),
                         ),
-                        trailing: _wcClient.peerId == session.peerId
+                        trailing: isconnected
                             ? TextButton(
                                 onPressed: () async {
                                   _wcClient.killSession();
@@ -190,7 +194,9 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   _onConnect() {
-    setState(() {});
+    setState(() {
+      isconnected = true;
+    });
   }
 
   _onSwitchNetwork(int id, int chainId) async {
@@ -288,7 +294,9 @@ class _MyHomePageState extends State<MyHomePage> {
                             );
                             await _prefs.setString('session',
                                 jsonEncode(_wcClient.sessionStore.toJson()));
-                            setState(() {});
+                            setState(() {
+                              isconnected = true;
+                            });
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text("Connected"),
@@ -349,7 +357,9 @@ class _MyHomePageState extends State<MyHomePage> {
 
   _onSessionClosed(int? code, String? reason) {
     _prefs.remove('session');
-    setState(() {});
+    setState(() {
+      isconnected = false;
+    });
     showDialog(
       context: context,
       builder: (_) {
