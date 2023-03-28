@@ -69,6 +69,11 @@ class _MyHomePageState extends State<MyHomePage> {
     privateKey =
         "ee8b67633761cf2e9d537a27149f2b727b861c014151269b856cbafd6d47ee79";
     _prefs = await SharedPreferences.getInstance();
+    if (_prefs.getKeys().length == 1) {
+      final key = _prefs.getString('session');
+      var session = WCSessionStore.fromJson(jsonDecode(key!));
+      await _wcClient.connectFromSessionStore(session);
+    }
     setState(() {
       isprefs = true;
     });
