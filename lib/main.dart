@@ -1,17 +1,18 @@
 // ignore_for_file: depend_on_referenced_packages, use_build_context_synchronously
 import 'dart:convert';
+import 'dart:math';
 import 'package:eth_sig_util/eth_sig_util.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:simple_wallet/simulation.dart';
 import 'package:wallet_connect/wallet_connect.dart';
-import 'eth_conversions.dart';
 import 'package:web3dart/crypto.dart';
 import 'package:web3dart/web3dart.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 
 import 'network.dart';
+import 'review.dart';
 
 void main() {
   runApp(const MyApp());
@@ -69,17 +70,15 @@ class _MyHomePageState extends State<MyHomePage> {
       onConnect: _onConnect,
       onWalletSwitchNetwork: _onSwitchNetwork,
     );
-    walletAddress = "0x783DEC73f73AA01EbdFafE0038Dc18BBAFCAAF7F";
+    walletAddress = "0x9f8a6ae7D45D46B7Ff502A7a3A70b646470422Fc";
     privateKey =
-        "ee8b67633761cf2e9d537a27149f2b727b861c014151269b856cbafd6d47ee79";
+        "10054c2275528f5c98d37b161bf4846ecac3d3bcbb4e832e77882c90c784cb4f";
     _prefs = await SharedPreferences.getInstance();
+    _prefs.clear();
     if (_prefs.getKeys().length == 1) {
       final key = _prefs.getString('session');
       var session = WCSessionStore.fromJson(jsonDecode(key!));
       await _wcClient.connectFromSessionStore(session);
-      setState(() {
-        isconnected = true;
-      });
     }
     setState(() {
       isprefs = true;
@@ -128,7 +127,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             session.remotePeerMeta.icons.first,
                           ),
                         ),
-                        trailing: isconnected
+                        trailing: _wcClient.peerId == session.peerId
                             ? TextButton(
                                 onPressed: () async {
                                   _wcClient.killSession();
@@ -281,8 +280,12 @@ class _MyHomePageState extends State<MyHomePage> {
                               Network.ethereumGoerli.rpc,
                               http.Client(),
                             );
-                            await _prefs.setString('session',
-                                jsonEncode(_wcClient.sessionStore.toJson()));
+
+                            await _prefs.setString(
+                              'session',
+                              jsonEncode(_wcClient.sessionStore.toJson()),
+                            );
+
                             setState(() {
                               isconnected = true;
                             });
@@ -296,7 +299,9 @@ class _MyHomePageState extends State<MyHomePage> {
                           },
                           child: const Padding(
                             padding: EdgeInsets.symmetric(
-                                horizontal: 15, vertical: 10),
+                              horizontal: 15,
+                              vertical: 10,
+                            ),
                             child: Text('APPROVE'),
                           ),
                         ),
@@ -349,6 +354,7 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       isconnected = false;
     });
+
     showDialog(
       context: context,
       builder: (_) {
@@ -461,9 +467,10 @@ class _MyHomePageState extends State<MyHomePage> {
     required VoidCallback onReject,
   }) async {
     BigInt gasPrice = BigInt.parse(ethereumTransaction.gasPrice ?? '0');
+    var gasOptions = await _web3client.getGasInEIP1559();
 
     if (gasPrice == BigInt.zero) {
-      gasPrice = await _web3client.estimateGas();
+      gasPrice = gasOptions[0].estimatedGas;
     }
 
     SimulationResponse response = await simulateTransaction(
@@ -480,210 +487,17 @@ class _MyHomePageState extends State<MyHomePage> {
       );
       return;
     }
-    showModalBottomSheet(
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(20),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ReviewTransaction(
+          ethereumTransaction: ethereumTransaction,
+          onConfirm: onConfirm,
+          onReject: onReject,
+          title: title,
+          response: response,
         ),
       ),
-      context: context,
-      builder: (_) {
-        return Wrap(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(15),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      const SizedBox(
-                        height: 30,
-                      ),
-                      if (_wcClient.remotePeerMeta!.icons.isNotEmpty)
-                        Container(
-                          height: 100.0,
-                          width: 100.0,
-                          padding: const EdgeInsets.only(bottom: 8.0),
-                          child: Image.network(
-                              _wcClient.remotePeerMeta!.icons.first),
-                        ),
-                      const SizedBox(height: 10),
-                      Text(
-                        _wcClient.remotePeerMeta!.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.normal,
-                          fontSize: 20.0,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Container(
-                        alignment: Alignment.center,
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: Text(
-                          title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18.0,
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0, top: 20),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Receipient',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16.0,
-                              ),
-                            ),
-                            const SizedBox(height: 8.0),
-                            Text(
-                              '${ethereumTransaction.to}',
-                              style: const TextStyle(fontSize: 12.0),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Transaction Fee',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16.0,
-                              ),
-                            ),
-                            Text(
-                              '${EthConversions.weiToEthUnTrimmed(BigInt.parse(response.gasUsed?.substring(2) ?? '0', radix: 16) * gasPrice, 18)} ETH',
-                              style: const TextStyle(fontSize: 16.0),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Transaction Amount',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16.0,
-                              ),
-                            ),
-                            Text(
-                              '${EthConversions.weiToEthUnTrimmed(BigInt.parse(ethereumTransaction.value ?? '0'), 18)} ETH',
-                              style: const TextStyle(fontSize: 16.0),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Theme(
-                        data: Theme.of(context)
-                            .copyWith(dividerColor: Colors.transparent),
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 8.0),
-                          child: ExpansionTile(
-                            tilePadding: EdgeInsets.zero,
-                            title: const Text(
-                              'Changes',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16.0,
-                              ),
-                            ),
-                            children: [
-                              Text(
-                                '${response.changes}',
-                                style: const TextStyle(fontSize: 16.0),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Theme(
-                        data: Theme.of(context)
-                            .copyWith(dividerColor: Colors.transparent),
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 8.0),
-                          child: ExpansionTile(
-                            tilePadding: EdgeInsets.zero,
-                            title: const Text(
-                              'Data',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16.0,
-                              ),
-                            ),
-                            children: [
-                              Text(
-                                '${ethereumTransaction.data}',
-                                style: const TextStyle(fontSize: 16.0),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextButton(
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor: Colors.black,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onPressed: onReject,
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 15, vertical: 10),
-                            child: Text('REJECT'),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16.0),
-                      Expanded(
-                        child: TextButton(
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.black,
-                            backgroundColor:
-                                Theme.of(context).colorScheme.secondary,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onPressed: onConfirm,
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 15, vertical: 10),
-                            child: Text('APPROVE'),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(
-                    height: 20,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        );
-      },
     );
   }
 
