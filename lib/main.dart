@@ -1,6 +1,7 @@
 // ignore_for_file: depend_on_referenced_packages, use_build_context_synchronously
 import 'dart:convert';
 import 'dart:math';
+import 'package:eip1559/eip1559.dart';
 import 'package:eth_sig_util/eth_sig_util.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -71,10 +72,8 @@ class _MyHomePageState extends State<MyHomePage> {
       onWalletSwitchNetwork: _onSwitchNetwork,
     );
     walletAddress = "0x9f8a6ae7D45D46B7Ff502A7a3A70b646470422Fc";
-    privateKey =
-        "10054c2275528f5c98d37b161bf4846ecac3d3bcbb4e832e77882c90c784cb4f";
+    privateKey = "";
     _prefs = await SharedPreferences.getInstance();
-    _prefs.clear();
     if (_prefs.getKeys().length == 1) {
       final key = _prefs.getString('session');
       var session = WCSessionStore.fromJson(jsonDecode(key!));
@@ -429,10 +428,28 @@ class _MyHomePageState extends State<MyHomePage> {
       title: 'Send Transaction',
       onConfirm: () async {
         try {
+          var gasOptions = await _web3client.getGasInEIP1559();
+          Transaction transaction = Transaction(
+            from: EthereumAddress.fromHex(ethereumTransaction.from),
+            to: EthereumAddress.fromHex(ethereumTransaction.to!),
+            maxGas: ethereumTransaction.gasLimit != null
+                ? int.tryParse(ethereumTransaction.gasLimit!)
+                : gasOptions[1].maxFeePerGas.toInt(),
+            gasPrice: ethereumTransaction.gasPrice != null
+                ? EtherAmount.inWei(BigInt.parse(ethereumTransaction.gasPrice!))
+                : EtherAmount.inWei(gasOptions[1].estimatedGas),
+            value: EtherAmount.inWei(
+                BigInt.parse(ethereumTransaction.value ?? '0')),
+            data: hexToBytes(ethereumTransaction.data!),
+            nonce: ethereumTransaction.nonce != null
+                ? int.tryParse(ethereumTransaction.nonce!)
+                : null,
+          );
+
           final creds = EthPrivateKey.fromHex(privateKey);
           final txhash = await _web3client.sendTransaction(
             creds,
-            _wcEthTxToWeb3Tx(ethereumTransaction),
+            transaction,
             chainId: _wcClient.chainId!,
           );
           debugPrint('txhash $txhash');
@@ -466,13 +483,6 @@ class _MyHomePageState extends State<MyHomePage> {
     required VoidCallback onConfirm,
     required VoidCallback onReject,
   }) async {
-    BigInt gasPrice = BigInt.parse(ethereumTransaction.gasPrice ?? '0');
-    var gasOptions = await _web3client.getGasInEIP1559();
-
-    if (gasPrice == BigInt.zero) {
-      gasPrice = gasOptions[0].estimatedGas;
-    }
-
     SimulationResponse response = await simulateTransaction(
       Network.ethereumGoerli,
       EthereumAddress.fromHex(ethereumTransaction.from),
@@ -658,7 +668,7 @@ class _MyHomePageState extends State<MyHomePage> {
       to: EthereumAddress.fromHex(ethereumTransaction.to!),
       maxGas: ethereumTransaction.gasLimit != null
           ? int.tryParse(ethereumTransaction.gasLimit!)
-          : 300000,
+          : null,
       gasPrice: ethereumTransaction.gasPrice != null
           ? EtherAmount.inWei(BigInt.parse(ethereumTransaction.gasPrice!))
           : null,
