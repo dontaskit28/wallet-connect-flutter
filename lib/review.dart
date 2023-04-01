@@ -1,7 +1,11 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:wallet_connect/wallet_connect.dart';
+import 'package:web3dart/web3dart.dart';
 import 'simulation.dart';
 
+// ignore: must_be_immutable
 class ReviewTransaction extends StatefulWidget {
   WCEthereumTransaction ethereumTransaction;
   VoidCallback onConfirm;
@@ -283,7 +287,7 @@ class _ReviewTransactionState extends State<ReviewTransaction> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              "${widget.response.gasUsed} ETH",
+                              "${(BigInt.parse(widget.response.gasUsed!.substring(2), radix: 16) / BigInt.from(pow(10, 9))).toStringAsFixed(7)} ETH",
                               style:
                                   const TextStyle(fontWeight: FontWeight.bold),
                             ),

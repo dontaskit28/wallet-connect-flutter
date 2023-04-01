@@ -1,5 +1,6 @@
 // ignore_for_file: depend_on_referenced_packages, use_build_context_synchronously
 import 'dart:convert';
+import 'package:convert/convert.dart';
 import 'dart:math';
 import 'package:eip1559/eip1559.dart';
 import 'package:eth_sig_util/eth_sig_util.dart';
@@ -399,10 +400,29 @@ class _MyHomePageState extends State<MyHomePage> {
       ethereumTransaction: ethereumTransaction,
       title: 'Sign Transaction',
       onConfirm: () async {
+        var gasOptions = await _web3client.getGasInEIP1559();
+        Transaction transaction = Transaction(
+          from: EthereumAddress.fromHex(ethereumTransaction.from),
+          to: EthereumAddress.fromHex(ethereumTransaction.to!),
+          value:
+              EtherAmount.inWei(BigInt.parse(ethereumTransaction.value ?? '0')),
+          data: hexToBytes(ethereumTransaction.data!),
+          nonce: ethereumTransaction.nonce != null
+              ? int.tryParse(ethereumTransaction.nonce!)
+              : null,
+          maxFeePerGas: EtherAmount.fromBigInt(
+            EtherUnit.wei,
+            gasOptions[1].maxFeePerGas,
+          ),
+          maxPriorityFeePerGas: EtherAmount.fromBigInt(
+            EtherUnit.wei,
+            gasOptions[1].maxPriorityFeePerGas,
+          ),
+        );
         final creds = EthPrivateKey.fromHex(privateKey);
         final tx = await _web3client.signTransaction(
           creds,
-          _wcEthTxToWeb3Tx(ethereumTransaction),
+          transaction,
           chainId: _wcClient.chainId!,
         );
         _wcClient.approveRequest<String>(
@@ -432,18 +452,20 @@ class _MyHomePageState extends State<MyHomePage> {
           Transaction transaction = Transaction(
             from: EthereumAddress.fromHex(ethereumTransaction.from),
             to: EthereumAddress.fromHex(ethereumTransaction.to!),
-            maxGas: ethereumTransaction.gasLimit != null
-                ? int.tryParse(ethereumTransaction.gasLimit!)
-                : gasOptions[1].maxFeePerGas.toInt(),
-            gasPrice: ethereumTransaction.gasPrice != null
-                ? EtherAmount.inWei(BigInt.parse(ethereumTransaction.gasPrice!))
-                : EtherAmount.inWei(gasOptions[1].estimatedGas),
             value: EtherAmount.inWei(
                 BigInt.parse(ethereumTransaction.value ?? '0')),
             data: hexToBytes(ethereumTransaction.data!),
             nonce: ethereumTransaction.nonce != null
                 ? int.tryParse(ethereumTransaction.nonce!)
                 : null,
+            maxFeePerGas: EtherAmount.fromBigInt(
+              EtherUnit.wei,
+              gasOptions[1].maxFeePerGas,
+            ),
+            maxPriorityFeePerGas: EtherAmount.fromBigInt(
+              EtherUnit.wei,
+              gasOptions[1].maxPriorityFeePerGas,
+            ),
           );
 
           final creds = EthPrivateKey.fromHex(privateKey);
@@ -515,6 +537,17 @@ class _MyHomePageState extends State<MyHomePage> {
     int id,
     WCEthereumSignMessage ethereumSignMessage,
   ) {
+    String message = ethereumSignMessage.data!;
+    if (message.startsWith('0x')) {
+      message = message.substring(2);
+      final bytes = hexToBytes(message);
+      if (bytes.length % 16 == 0) {
+        message = utf8.decode(bytes, allowMalformed: true);
+      } else {
+        message = utf8.decode(bytes);
+      }
+    }
+
     showModalBottomSheet(
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
@@ -575,7 +608,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         ),
                         children: [
                           Text(
-                            ethereumSignMessage.data!,
+                            message,
                             style: const TextStyle(fontSize: 16.0),
                           ),
                         ],
