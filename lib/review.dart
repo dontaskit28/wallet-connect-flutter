@@ -12,6 +12,8 @@ class ReviewTransaction extends StatefulWidget {
   VoidCallback onReject;
   SimulationResponse response;
   String title;
+  List<SimulationResponseChanges> withdraw;
+  List<SimulationResponseChanges> deposit;
   ReviewTransaction({
     super.key,
     required this.ethereumTransaction,
@@ -19,6 +21,8 @@ class ReviewTransaction extends StatefulWidget {
     required this.onReject,
     required this.title,
     required this.response,
+    required this.withdraw,
+    required this.deposit,
   });
 
   @override
@@ -51,88 +55,110 @@ class _ReviewTransactionState extends State<ReviewTransaction> {
             const SizedBox(
               height: 20,
             ),
-            Row(
-              children: [
-                Text(
-                  "Withdrawing".toUpperCase(),
-                  style: const TextStyle(color: Colors.white70),
-                ),
-              ],
-            ),
-            const SizedBox(
-              height: 10,
-            ),
-            Container(
-              height: 40,
-              decoration: const BoxDecoration(
-                color: Color.fromARGB(255, 37, 172, 202),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(10),
-                  topRight: Radius.circular(10),
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text("Account 1"),
-                    Text(
-                        "${widget.ethereumTransaction.from.substring(0, 5)}...${widget.ethereumTransaction.from.substring(36)}"),
-                  ],
-                ),
-              ),
-            ),
-            Container(
-              height: 90,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade800,
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(10),
-                  bottomRight: Radius.circular(10),
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Row(
-                      children: const [
-                        CircleAvatar(
-                          backgroundColor: Colors.white,
-                          radius: 25,
+            widget.withdraw.isEmpty
+                ? Container()
+                : Column(
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            "Withdrawing".toUpperCase(),
+                            style: const TextStyle(color: Colors.white70),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(
+                        height: 10,
+                      ),
+                      Container(
+                        height: 40,
+                        decoration: const BoxDecoration(
+                          color: Color.fromARGB(255, 37, 172, 202),
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(10),
+                            topRight: Radius.circular(10),
+                          ),
                         ),
-                        SizedBox(
-                          width: 15,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text("Account 1"),
+                              Text(
+                                  "${widget.ethereumTransaction.from.substring(0, 5)}...${widget.ethereumTransaction.from.substring(36)}"),
+                            ],
+                          ),
                         ),
-                        Text(
-                          "ETH",
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Container(
+                        height: widget.withdraw.length.toDouble() * 80,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade800,
+                          borderRadius: const BorderRadius.only(
+                            bottomLeft: Radius.circular(10),
+                            bottomRight: Radius.circular(10),
+                          ),
                         ),
-                      ],
-                    ),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          "${widget.ethereumTransaction.value}",
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        child: ListView.builder(
+                          itemCount: widget.withdraw.length,
+                          padding: const EdgeInsets.all(0),
+                          itemBuilder: (context, index) {
+                            return Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 20),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Row(
+                                    children: [
+                                      CircleAvatar(
+                                        backgroundColor: Colors.white,
+                                        radius: 25,
+                                        child: Image(
+                                          image: NetworkImage(
+                                              widget.withdraw[index].logo ??
+                                                  ""),
+                                        ),
+                                      ),
+                                      const SizedBox(
+                                        width: 15,
+                                      ),
+                                      Text(
+                                        widget.withdraw[index].symbol,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                  Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        "${double.parse(widget.withdraw[index].amount).toStringAsPrecision(3)} ${widget.withdraw[index].symbol}",
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      const Text("\$0.00 USD"),
+                                    ],
+                                  )
+                                ],
+                              ),
+                            );
+                          },
                         ),
-                        const Text("\$1.37"),
-                      ],
-                    )
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(
-              height: 20,
-            ),
+                      ),
+                      const SizedBox(
+                        height: 20,
+                      ),
+                    ],
+                  ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 15),
               child: Row(
@@ -159,105 +185,126 @@ class _ReviewTransactionState extends State<ReviewTransaction> {
             const SizedBox(
               height: 20,
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  Text(
-                    "Depositing".toUpperCase(),
-                    style: const TextStyle(color: Colors.white70),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(
-              height: 10,
-            ),
-            Container(
-              height: 40,
-              decoration: const BoxDecoration(
-                color: Color.fromARGB(255, 37, 172, 202),
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(10),
-                  topRight: Radius.circular(10),
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text("Account 1"),
-                    Text(
-                        "${widget.ethereumTransaction.to?.substring(0, 5)}...${widget.ethereumTransaction.to?.substring(36)}"),
-                  ],
-                ),
-              ),
-            ),
-            Container(
-              height: 90,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade800,
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(10),
-                  bottomRight: Radius.circular(10),
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Row(
-                      children: [
-                        const CircleAvatar(
-                          backgroundColor: Colors.white,
-                          radius: 25,
-                        ),
-                        const SizedBox(
-                          width: 15,
-                        ),
-                        Text(
-                          widget.title,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+            widget.deposit.isEmpty
+                ? Container()
+                : Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Row(
                           children: [
-                            const Text("Estimated"),
-                            const SizedBox(
-                              width: 10,
-                            ),
                             Text(
-                              "${widget.ethereumTransaction.value}",
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
+                              "Depositing".toUpperCase(),
+                              style: const TextStyle(color: Colors.white70),
                             ),
                           ],
                         ),
-                        Row(
-                          children: const [
-                            Text("Estimated"),
-                            SizedBox(
-                              width: 10,
-                            ),
-                            Text("\$1.37"),
-                          ],
+                      ),
+                      const SizedBox(
+                        height: 10,
+                      ),
+                      Container(
+                        height: 40,
+                        decoration: const BoxDecoration(
+                          color: Color.fromARGB(255, 37, 172, 202),
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(10),
+                            topRight: Radius.circular(10),
+                          ),
                         ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text("Account 1"),
+                              Text(
+                                  "${widget.ethereumTransaction.to?.substring(0, 5)}...${widget.ethereumTransaction.to?.substring(36)}"),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Container(
+                        height: widget.deposit.length.toDouble() * 80,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade800,
+                          borderRadius: const BorderRadius.only(
+                            bottomLeft: Radius.circular(10),
+                            bottomRight: Radius.circular(10),
+                          ),
+                        ),
+                        child: ListView.builder(
+                          itemCount: widget.deposit.length,
+                          padding: const EdgeInsets.all(0),
+                          itemBuilder: (context, index) {
+                            return Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 20),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Row(
+                                    children: [
+                                      CircleAvatar(
+                                        backgroundColor: Colors.white,
+                                        radius: 25,
+                                        child: Image(
+                                          image: NetworkImage(
+                                              widget.deposit[index].logo ?? ""),
+                                        ),
+                                      ),
+                                      const SizedBox(
+                                        width: 15,
+                                      ),
+                                      Text(
+                                        widget.deposit[index].symbol,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                  Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          const Text("Estimated"),
+                                          const SizedBox(
+                                            width: 10,
+                                          ),
+                                          Text(
+                                            "${double.parse(widget.deposit[index].amount).toStringAsPrecision(3)} ${widget.deposit[index].symbol}",
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold),
+                                          ),
+                                        ],
+                                      ),
+                                      Row(
+                                        children: const [
+                                          Text("Estimated"),
+                                          SizedBox(
+                                            width: 10,
+                                          ),
+                                          Text("\$0.00 USD"),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
             const SizedBox(
               height: 20,
             ),
@@ -287,12 +334,12 @@ class _ReviewTransactionState extends State<ReviewTransaction> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              "${(BigInt.parse(widget.response.gasUsed!.substring(2), radix: 16) / BigInt.from(pow(10, 9))).toStringAsFixed(7)} ETH",
+                              "${(BigInt.parse(widget.response.gasUsed!.substring(2), radix: 16) / BigInt.from(pow(10, 9))).toStringAsPrecision(3)} ETH",
                               style:
                                   const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             Text(
-                                "Max ${widget.ethereumTransaction.maxPriorityFeePerGas ?? "0.003"} ETH"),
+                                "Max ${widget.ethereumTransaction.gasLimit ?? "0.0003"} ETH"),
                           ],
                         ),
                       ],
@@ -301,11 +348,11 @@ class _ReviewTransactionState extends State<ReviewTransaction> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.center,
-                      children: const [
-                        Text("Total Cost"),
+                      children: [
+                        const Text("Total Cost"),
                         Text(
-                          "0.000315 ETH",
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                          "${((BigInt.parse(widget.response.gasUsed!.substring(2), radix: 16) / BigInt.from(pow(10, 9))) + (BigInt.parse(widget.ethereumTransaction.value?.substring(2) ?? "0", radix: 16) / BigInt.from(pow(10, 18)))).toStringAsPrecision(3)} ETH",
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -354,7 +401,7 @@ class _ReviewTransactionState extends State<ReviewTransaction> {
                     child: ElevatedButton(
                       style: ButtonStyle(
                         backgroundColor: MaterialStateProperty.all(
-                          const Color.fromARGB(255, 92, 157, 210),
+                          const Color(0xff37CBFA).withOpacity(0.6),
                         ),
                         shape: MaterialStatePropertyAll(
                           RoundedRectangleBorder(
@@ -370,9 +417,7 @@ class _ReviewTransactionState extends State<ReviewTransaction> {
                         ),
                         child: Text(
                           "Confirm",
-                          style: TextStyle(
-                            fontSize: 18,
-                          ),
+                          style: TextStyle(fontSize: 18, color: Colors.white),
                         ),
                       ),
                     ),

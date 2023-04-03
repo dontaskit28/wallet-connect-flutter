@@ -1,18 +1,21 @@
 // ignore_for_file: depend_on_referenced_packages, use_build_context_synchronously
 import 'dart:convert';
 import 'package:convert/convert.dart';
+import 'package:scan/scan.dart';
 import 'dart:math';
 import 'package:eip1559/eip1559.dart';
 import 'package:eth_sig_util/eth_sig_util.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:simple_wallet/simulation.dart';
+import 'package:simple_wallet/widgets/get_key.dart';
+import 'package:simple_wallet/widgets/not_connected.dart';
+import 'package:simple_wallet/widgets/qr_scan_view.dart';
 import 'package:wallet_connect/wallet_connect.dart';
 import 'package:web3dart/crypto.dart';
 import 'package:web3dart/web3dart.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
-
 import 'network.dart';
 import 'review.dart';
 
@@ -49,10 +52,22 @@ const rpcUri = 'https://goerli.infura.io/v3/04487b56429746eda260c75599f9747a';
 class _MyHomePageState extends State<MyHomePage> {
   late WCClient _wcClient;
   late SharedPreferences _prefs;
-  late String walletAddress, privateKey;
+  late String privateKey;
   Web3Client _web3client = Web3Client(rpcUri, http.Client());
   bool isprefs = false;
   bool isconnected = false;
+  bool hasPrivateKey = false;
+  TextEditingController controller = TextEditingController();
+  ScanController scanController = ScanController();
+
+  final List<String> networks = [
+    'ethereum-goerli',
+    'ethereum-mainnet',
+    'ethereum-sepolia',
+    'polygon-matic',
+    'polygon-mumbai',
+  ];
+  String selectedNetwork = 'ethereum-goerli';
 
   @override
   void initState() {
@@ -72,10 +87,13 @@ class _MyHomePageState extends State<MyHomePage> {
       onConnect: _onConnect,
       onWalletSwitchNetwork: _onSwitchNetwork,
     );
-    walletAddress = "0x9f8a6ae7D45D46B7Ff502A7a3A70b646470422Fc";
-    privateKey = "";
     _prefs = await SharedPreferences.getInstance();
-    if (_prefs.getKeys().length == 1) {
+    if (_prefs.containsKey('privateKey')) {
+      privateKey = _prefs.getString('privateKey')!;
+      hasPrivateKey = true;
+    }
+
+    if (_prefs.getKeys().length > 1) {
       final key = _prefs.getString('session');
       var session = WCSessionStore.fromJson(jsonDecode(key!));
       await _wcClient.connectFromSessionStore(session);
@@ -88,69 +106,100 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Wallet Connect"),
-        actions: [
-          IconButton(
-            onPressed: () async {
-              var response = await FlutterBarcodeScanner.scanBarcode(
-                '#ff6666',
-                'Cancel',
-                true,
-                ScanMode.QR,
-              );
-              _qrScanHandler(response);
-            },
-            icon: const Icon(Icons.qr_code_scanner),
-          ),
-          const SizedBox(width: 15),
-        ],
-      ),
-      backgroundColor: Colors.black,
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            flex: 6,
-            child: isprefs
-                ? ListView.builder(
-                    itemCount: _prefs.getKeys().length,
-                    itemBuilder: (context, index) {
-                      final key = _prefs.getString('session');
-                      var session = WCSessionStore.fromJson(jsonDecode(key!));
-                      return ListTile(
-                        title: Text(session.remotePeerMeta.name),
-                        subtitle: Text(session.remotePeerMeta.url),
-                        leading: CircleAvatar(
-                          backgroundImage: NetworkImage(
-                            session.remotePeerMeta.icons.first,
-                          ),
-                        ),
-                        trailing: _wcClient.peerId == session.peerId
-                            ? TextButton(
-                                onPressed: () async {
-                                  _wcClient.killSession();
-                                },
-                                child: const Text('Disconnect'),
-                              )
-                            : TextButton(
-                                onPressed: () async {
-                                  await _wcClient.connectFromSessionStore(
-                                    session,
-                                  );
-                                },
-                                child: const Text('Connect'),
-                              ),
-                      );
-                    },
-                  )
-                : const Center(
-                    child: CircularProgressIndicator(),
+      backgroundColor: const Color(0xff1e1e1e),
+      body: hasPrivateKey
+          ? Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SizedBox(height: 60),
+                const CircleAvatar(
+                  backgroundColor: Color(0xff373737),
+                  child: Icon(
+                    Icons.people,
+                    size: 30,
                   ),
-          ),
-        ],
-      ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  "Connections",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Expanded(
+                  flex: 6,
+                  child: isprefs
+                      ? _prefs.getKeys().length > 1
+                          ? ListView.builder(
+                              itemCount: _prefs.getKeys().length - 1,
+                              itemBuilder: (context, index) {
+                                final key = _prefs.getString('session');
+                                var session =
+                                    WCSessionStore.fromJson(jsonDecode(key!));
+                                return ListTile(
+                                  title: Text(session.remotePeerMeta.name),
+                                  subtitle: Text(session.remotePeerMeta.url),
+                                  leading: CircleAvatar(
+                                    backgroundImage: NetworkImage(
+                                      session.remotePeerMeta.icons.first,
+                                    ),
+                                  ),
+                                  trailing: _wcClient.peerId == session.peerId
+                                      ? TextButton(
+                                          onPressed: () async {
+                                            _wcClient.killSession();
+                                          },
+                                          child: const Text('Disconnect'),
+                                        )
+                                      : TextButton(
+                                          onPressed: () async {
+                                            await _wcClient
+                                                .connectFromSessionStore(
+                                              session,
+                                            );
+                                          },
+                                          child: const Text('Connect'),
+                                        ),
+                                );
+                              },
+                            )
+                          : NotConnected(
+                              onPress: () async {
+                                Navigator.push(context, MaterialPageRoute(
+                                  builder: (context) {
+                                    return const QRScanView();
+                                  },
+                                )).then((value) {
+                                  if (value != null) {
+                                    _qrScanHandler(value);
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('No QR Code Found'),
+                                      ),
+                                    );
+                                  }
+                                });
+                              },
+                            )
+                      : const Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                ),
+              ],
+            )
+          : GetKey(
+              onPressed: () async {
+                if (controller.text.isNotEmpty) {
+                  privateKey = controller.text;
+                  await _prefs.setString('privateKey', privateKey);
+                  hasPrivateKey = true;
+                }
+              },
+              controller: controller,
+            ),
     );
   }
 
@@ -159,9 +208,9 @@ class _MyHomePageState extends State<MyHomePage> {
       final session = WCSession.from(value);
       debugPrint('session $session');
       final peerMeta = WCPeerMeta(
-        name: "Apex Wallet",
-        url: "https://apex.wallet",
-        description: "Apex Wallet",
+        name: "Avex Wallet",
+        url: "https://avex.wallet",
+        description: "Avex Wallet",
         icons: [
           "https://gblobscdn.gitbook.com/spaces%2F-LJJeCjcLrr53DcT1Ml7%2Favatar.png"
         ],
@@ -195,123 +244,196 @@ class _MyHomePageState extends State<MyHomePage> {
     showModalBottomSheet(
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(20),
+          top: Radius.circular(40),
         ),
       ),
       context: context,
-      builder: (_) {
-        return Wrap(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(15),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    children: [
-                      const SizedBox(
-                        height: 40,
-                      ),
-                      if (peerMeta.icons.isNotEmpty)
-                        Container(
-                          height: 100.0,
-                          width: 100.0,
-                          padding: const EdgeInsets.only(bottom: 8.0),
-                          child: Image.network(peerMeta.icons.first),
-                        ),
-                      const SizedBox(height: 10.0),
-                      Text(peerMeta.name),
-                    ],
-                  ),
-                  if (peerMeta.description.isNotEmpty)
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, setState) {
+            return LimitedBox(
+              child: Container(
+                padding: const EdgeInsets.all(15),
+                decoration: const BoxDecoration(color: Colors.black),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
                     Column(
                       children: [
-                        const SizedBox(height: 10.0),
-                        Text(peerMeta.description),
-                      ],
-                    ),
-                  if (peerMeta.url.isNotEmpty)
-                    Column(
-                      children: [
-                        const SizedBox(height: 10.0),
-                        Text(peerMeta.url),
-                      ],
-                    ),
-                  const SizedBox(height: 40.0),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextButton(
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            backgroundColor: Colors.black,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onPressed: () {
-                            _wcClient.rejectSession();
-                            Navigator.pop(context);
-                          },
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 15, vertical: 10),
-                            child: Text('REJECT'),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16.0),
-                      Expanded(
-                        child: TextButton(
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.black,
-                            backgroundColor:
-                                Theme.of(context).colorScheme.secondary,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onPressed: () async {
-                            _wcClient.approveSession(
-                              accounts: [walletAddress],
-                              chainId: Network.ethereumGoerli.chainId,
-                            );
-                            _web3client = Web3Client(
-                              Network.ethereumGoerli.rpc,
-                              http.Client(),
-                            );
-
-                            await _prefs.setString(
-                              'session',
-                              jsonEncode(_wcClient.sessionStore.toJson()),
-                            );
-
-                            setState(() {
-                              isconnected = true;
-                            });
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Connected"),
-                                backgroundColor: Colors.green,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Container(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 10.0),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8.0),
+                                color: const Color(0xff373737),
                               ),
-                            );
-                            Navigator.pop(context);
-                          },
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 15,
-                              vertical: 10,
+                              child: DropdownButton<String>(
+                                value: selectedNetwork,
+                                icon: const Icon(Icons.arrow_drop_down),
+                                iconSize: 24.0,
+                                elevation: 16,
+                                style: const TextStyle(
+                                  fontSize: 16.0,
+                                ),
+                                underline: Container(
+                                  height: 0,
+                                ),
+                                onChanged: (String? newValue) {
+                                  setState(() {
+                                    selectedNetwork = newValue!;
+                                  });
+                                  _web3client = Web3Client(
+                                    selectedNetwork.toNetwork().rpc,
+                                    http.Client(),
+                                  );
+                                },
+                                items: networks.map<DropdownMenuItem<String>>(
+                                    (String value) {
+                                  return DropdownMenuItem<String>(
+                                    value: value,
+                                    child: Row(
+                                      children: [
+                                        const CircleAvatar(
+                                          radius: 17,
+                                          backgroundColor: Colors.white,
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Text(value),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
                             ),
-                            child: Text('APPROVE'),
+                          ],
+                        ),
+                        const SizedBox(
+                          height: 40,
+                        ),
+                        if (peerMeta.icons.isNotEmpty)
+                          Container(
+                            height: 100.0,
+                            width: 100.0,
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: Image.network(peerMeta.icons.first),
+                          ),
+                        const SizedBox(height: 10.0),
+                        Text(
+                          peerMeta.name,
+                          style: const TextStyle(
+                            fontSize: 24,
                           ),
                         ),
+                      ],
+                    ),
+                    SizedBox(
+                      width: MediaQuery.of(context).size.width * 0.75,
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 10.0),
+                          Text(
+                            "${peerMeta.name} wants to connect to your Avex wallet",
+                            style: const TextStyle(color: Colors.grey),
+                            overflow: TextOverflow.clip,
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(height: 100.0),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              backgroundColor: const Color(0xff373737),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onPressed: () {
+                              _wcClient.rejectSession();
+                              Navigator.pop(context);
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 15,
+                                vertical: 7,
+                              ),
+                              child: Text(
+                                'Cancel',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16.0),
+                        Expanded(
+                          child: TextButton(
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.black,
+                              backgroundColor:
+                                  const Color(0xff37CBFA).withOpacity(0.6),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onPressed: () async {
+                              _wcClient.approveSession(
+                                accounts: [
+                                  EthPrivateKey.fromHex(privateKey).address.hex
+                                ],
+                                chainId: selectedNetwork.toNetwork().chainId,
+                              );
+                              _web3client = Web3Client(
+                                selectedNetwork.toNetwork().rpc,
+                                http.Client(),
+                              );
+
+                              await _prefs.setString(
+                                'session',
+                                jsonEncode(_wcClient.sessionStore.toJson()),
+                              );
+
+                              setState(() {
+                                isconnected = true;
+                              });
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Connected"),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                              Navigator.pop(context);
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 15,
+                                vertical: 7,
+                              ),
+                              child: Text(
+                                'Connect',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            )
-          ],
+            );
+          },
         );
       },
     );
@@ -334,7 +456,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 TextButton(
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.black,
-                    backgroundColor: Theme.of(context).colorScheme.secondary,
+                    backgroundColor: const Color(0xff37CBFA).withOpacity(0.6),
                   ),
                   onPressed: () {
                     Navigator.pop(context);
@@ -376,7 +498,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 TextButton(
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.black,
-                    backgroundColor: Theme.of(context).colorScheme.secondary,
+                    backgroundColor: const Color(0xff37CBFA).withOpacity(0.6),
                   ),
                   onPressed: () {
                     Navigator.pop(context);
@@ -407,9 +529,6 @@ class _MyHomePageState extends State<MyHomePage> {
           value:
               EtherAmount.inWei(BigInt.parse(ethereumTransaction.value ?? '0')),
           data: hexToBytes(ethereumTransaction.data!),
-          nonce: ethereumTransaction.nonce != null
-              ? int.tryParse(ethereumTransaction.nonce!)
-              : null,
           maxFeePerGas: EtherAmount.fromBigInt(
             EtherUnit.wei,
             gasOptions[1].maxFeePerGas,
@@ -455,9 +574,6 @@ class _MyHomePageState extends State<MyHomePage> {
             value: EtherAmount.inWei(
                 BigInt.parse(ethereumTransaction.value ?? '0')),
             data: hexToBytes(ethereumTransaction.data!),
-            nonce: ethereumTransaction.nonce != null
-                ? int.tryParse(ethereumTransaction.nonce!)
-                : null,
             maxFeePerGas: EtherAmount.fromBigInt(
               EtherUnit.wei,
               gasOptions[1].maxFeePerGas,
@@ -506,7 +622,7 @@ class _MyHomePageState extends State<MyHomePage> {
     required VoidCallback onReject,
   }) async {
     SimulationResponse response = await simulateTransaction(
-      Network.ethereumGoerli,
+      selectedNetwork.toNetwork(),
       EthereumAddress.fromHex(ethereumTransaction.from),
       _wcEthTxToWeb3Tx(ethereumTransaction),
     );
@@ -519,6 +635,16 @@ class _MyHomePageState extends State<MyHomePage> {
       );
       return;
     }
+
+    List<SimulationResponseChanges> withdraw = [];
+    List<SimulationResponseChanges> deposit = [];
+    for (int i = 0; i < response.changes!.length; i++) {
+      if (response.changes![i].from == ethereumTransaction.from) {
+        withdraw.add(response.changes![i]);
+      } else if (response.changes![i].to == ethereumTransaction.from) {
+        deposit.add(response.changes![i]);
+      }
+    }
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -528,6 +654,8 @@ class _MyHomePageState extends State<MyHomePage> {
           onReject: onReject,
           title: title,
           response: response,
+          withdraw: withdraw,
+          deposit: deposit,
         ),
       ),
     );
@@ -643,9 +771,8 @@ class _MyHomePageState extends State<MyHomePage> {
                       Expanded(
                         child: TextButton(
                           style: TextButton.styleFrom(
-                            foregroundColor: Colors.black,
                             backgroundColor:
-                                Theme.of(context).colorScheme.secondary,
+                                const Color(0xff37CBFA).withOpacity(0.6),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -680,7 +807,10 @@ class _MyHomePageState extends State<MyHomePage> {
                               horizontal: 15,
                               vertical: 10,
                             ),
-                            child: Text('SIGN'),
+                            child: Text(
+                              'SIGN',
+                              style: TextStyle(color: Colors.white),
+                            ),
                           ),
                         ),
                       ),
