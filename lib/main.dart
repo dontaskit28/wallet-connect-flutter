@@ -165,28 +165,62 @@ class _MyHomePageState extends State<MyHomePage> {
                                 );
                               },
                             )
-                          : NotConnected(
-                              onPress: () async {
-                                Navigator.push(context, MaterialPageRoute(
-                                  builder: (context) {
-                                    return const QRScanView();
-                                  },
-                                )).then((value) {
-                                  if (value != null) {
-                                    _qrScanHandler(value);
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('No QR Code Found'),
-                                      ),
-                                    );
-                                  }
-                                });
-                              },
-                            )
+                          : const NotConnected()
                       : const Center(
                           child: CircularProgressIndicator(),
                         ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: MediaQuery.of(context).size.width * 0.7,
+                        child: ElevatedButton(
+                          style: ButtonStyle(
+                            backgroundColor: MaterialStateProperty.all(
+                              const Color(0xff37CBFA).withOpacity(0.6),
+                            ),
+                            padding: MaterialStateProperty.all(
+                              const EdgeInsets.symmetric(
+                                vertical: 10,
+                                horizontal: 20,
+                              ),
+                            ),
+                            shape: MaterialStateProperty.all(
+                              RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                            ),
+                          ),
+                          onPressed: () async {
+                            Navigator.push(context, MaterialPageRoute(
+                              builder: (context) {
+                                return const QRScanView();
+                              },
+                            )).then(
+                              (value) {
+                                if (value != null) {
+                                  _qrScanHandler(value);
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('No QR Code Found'),
+                                    ),
+                                  );
+                                }
+                              },
+                            );
+                          },
+                          child: const Text(
+                            "Scan QR Code",
+                            style: TextStyle(fontSize: 24, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             )

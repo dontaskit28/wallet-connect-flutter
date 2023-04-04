@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
 class NotConnected extends StatelessWidget {
-  VoidCallback onPress;
-  NotConnected({super.key, required this.onPress});
+  const NotConnected({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -30,37 +29,6 @@ class NotConnected extends StatelessWidget {
                 "You Connections will appear here",
                 style: TextStyle(
                   fontSize: 16,
-                ),
-              ),
-            ],
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(
-                width: MediaQuery.of(context).size.width * 0.7,
-                child: ElevatedButton(
-                  style: ButtonStyle(
-                    backgroundColor: MaterialStateProperty.all(
-                      const Color(0xff37CBFA).withOpacity(0.6),
-                    ),
-                    padding: MaterialStateProperty.all(
-                      const EdgeInsets.symmetric(
-                        vertical: 10,
-                        horizontal: 20,
-                      ),
-                    ),
-                    shape: MaterialStateProperty.all(
-                      RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                    ),
-                  ),
-                  onPressed: onPress,
-                  child: const Text(
-                    "Scan QR Code",
-                    style: TextStyle(fontSize: 24, color: Colors.white),
-                  ),
                 ),
               ),
             ],

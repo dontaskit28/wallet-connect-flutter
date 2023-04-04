@@ -176,7 +176,9 @@ class _ReviewTransactionState extends State<ReviewTransaction> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Center(
-                      child: Text(widget.title),
+                      child: Text(widget.deposit.isEmpty
+                          ? "Sending"
+                          : "${widget.deposit[0].contractAddress?.substring(0, 5)}...${widget.deposit[0].contractAddress?.substring(36)}"),
                     ),
                   ),
                 ],
