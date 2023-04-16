@@ -229,7 +229,9 @@ class _MyHomePageState extends State<MyHomePage> {
                 if (controller.text.isNotEmpty) {
                   privateKey = controller.text;
                   await _prefs.setString('privateKey', privateKey);
-                  hasPrivateKey = true;
+                  setState(() {
+                    hasPrivateKey = true;
+                  });
                 }
               },
               controller: controller,

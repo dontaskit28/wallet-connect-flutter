@@ -15,11 +15,6 @@ class _QRScanViewState extends State<QRScanView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Scan"),
-        backgroundColor: Colors.grey.shade900,
-        elevation: 0,
-      ),
       backgroundColor: Colors.grey.shade900,
       body: Center(
         child: Column(
@@ -29,9 +24,9 @@ class _QRScanViewState extends State<QRScanView> {
             Stack(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(20),
-                  height: 260,
-                  width: 260,
+                  height: MediaQuery.of(context).size.height,
+                  width: MediaQuery.of(context).size.height,
+                  // padding: const EdgeInsets.all(20),
                   child: ScanView(
                     controller: controller,
                     scanAreaScale: 1,
@@ -41,25 +36,29 @@ class _QRScanViewState extends State<QRScanView> {
                     },
                   ),
                 ),
-                Container(
-                  height: 80,
-                  width: 80,
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      top: BorderSide(
-                        color: Colors.white,
-                        width: 4,
-                      ),
-                      left: BorderSide(
-                        color: Colors.white,
-                        width: 4,
+                Positioned(
+                  top: MediaQuery.of(context).size.height * 0.35,
+                  left: 80,
+                  child: Container(
+                    height: 80,
+                    width: 80,
+                    decoration: const BoxDecoration(
+                      border: Border(
+                        top: BorderSide(
+                          color: Colors.white,
+                          width: 4,
+                        ),
+                        left: BorderSide(
+                          color: Colors.white,
+                          width: 4,
+                        ),
                       ),
                     ),
                   ),
                 ),
                 Positioned(
-                  top: 0,
-                  right: 0,
+                  top: MediaQuery.of(context).size.height * 0.35,
+                  right: 80,
                   child: Container(
                     height: 80,
                     width: 80,
@@ -78,8 +77,8 @@ class _QRScanViewState extends State<QRScanView> {
                   ),
                 ),
                 Positioned(
-                  bottom: 0,
-                  left: 0,
+                  bottom: MediaQuery.of(context).size.height * 0.35,
+                  left: 80,
                   child: Container(
                     height: 80,
                     width: 80,
@@ -98,8 +97,8 @@ class _QRScanViewState extends State<QRScanView> {
                   ),
                 ),
                 Positioned(
-                  bottom: 0,
-                  right: 0,
+                  bottom: MediaQuery.of(context).size.height * 0.35,
+                  right: 80,
                   child: Container(
                     height: 80,
                     width: 80,
@@ -117,30 +116,27 @@ class _QRScanViewState extends State<QRScanView> {
                     ),
                   ),
                 ),
+                Positioned(
+                  bottom: 40,
+                  left: MediaQuery.of(context).size.width * 0.5,
+                  child: CircleAvatar(
+                    child: IconButton(
+                      onPressed: () async {
+                        List<Media>? res = await ImagesPicker.pick();
+                        if (res != null) {
+                          String? str = await Scan.parse(res[0].path);
+                          if (str != null) {
+                            return Navigator.pop(context, str);
+                          } else {
+                            return Navigator.pop(context, "No QR code found");
+                          }
+                        }
+                      },
+                      icon: const Icon(Icons.image),
+                    ),
+                  ),
+                )
               ],
-            ),
-            const SizedBox(
-              height: 40,
-            ),
-            const Text("Scan the QR code"),
-            const SizedBox(
-              height: 20,
-            ),
-            CircleAvatar(
-              child: IconButton(
-                onPressed: () async {
-                  List<Media>? res = await ImagesPicker.pick();
-                  if (res != null) {
-                    String? str = await Scan.parse(res[0].path);
-                    if (str != null) {
-                      return Navigator.pop(context, str);
-                    } else {
-                      return Navigator.pop(context, "No QR code found");
-                    }
-                  }
-                },
-                icon: const Icon(Icons.image),
-              ),
             ),
           ],
         ),
