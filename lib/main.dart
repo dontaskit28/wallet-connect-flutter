@@ -16,7 +16,11 @@ import 'package:wallet_connect/wallet_connect.dart';
 import 'package:web3dart/crypto.dart';
 import 'package:web3dart/web3dart.dart';
 import 'package:http/http.dart' as http;
-import 'network.dart';
+import '../utils/services/evm/core/main.service.dart' as evm;
+import '../utils/constants/network.dart';
+import '../utils/services/wallet/key.service.dart' as key;
+import '../utils/services/evm/token.service.dart' as token;
+// import 'network.dart';
 import 'review.dart';
 
 void main() {
@@ -322,7 +326,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                     selectedNetwork = newValue!;
                                   });
                                   _web3client = Web3Client(
-                                    selectedNetwork.toNetwork().rpc,
+                                    selectedNetwork.toNetwork()!.rpc,
                                     http.Client(),
                                   );
                                 },
@@ -425,10 +429,10 @@ class _MyHomePageState extends State<MyHomePage> {
                                 accounts: [
                                   EthPrivateKey.fromHex(privateKey).address.hex
                                 ],
-                                chainId: selectedNetwork.toNetwork().chainId,
+                                chainId: selectedNetwork.toNetwork()!.chainId,
                               );
                               _web3client = Web3Client(
-                                selectedNetwork.toNetwork().rpc,
+                                selectedNetwork.toNetwork()!.rpc,
                                 http.Client(),
                               );
 
@@ -603,34 +607,37 @@ class _MyHomePageState extends State<MyHomePage> {
       title: 'Send Transaction',
       onConfirm: () async {
         try {
-          var gasOptions = await _web3client.getGasInEIP1559();
-          Transaction transaction = Transaction(
-            from: EthereumAddress.fromHex(ethereumTransaction.from),
-            to: EthereumAddress.fromHex(ethereumTransaction.to!),
-            value: EtherAmount.inWei(
-                BigInt.parse(ethereumTransaction.value ?? '0')),
-            data: hexToBytes(ethereumTransaction.data!),
-            maxFeePerGas: EtherAmount.fromBigInt(
-              EtherUnit.wei,
-              gasOptions[1].maxFeePerGas,
-            ),
-            maxPriorityFeePerGas: EtherAmount.fromBigInt(
-              EtherUnit.wei,
-              gasOptions[1].maxPriorityFeePerGas,
-            ),
-          );
+          // var nativeTokenTransaction = await evm.sendTransaction(
+          //     client, network, credentials, rawTransaction);
+          // print("transaction: $nativeTokenTransaction");
+          // var gasOptions = await _web3client.getGasInEIP1559();
+          // Transaction transaction = Transaction(
+          //   from: EthereumAddress.fromHex(ethereumTransaction.from),
+          //   to: EthereumAddress.fromHex(ethereumTransaction.to!),
+          //   value: EtherAmount.inWei(
+          //       BigInt.parse(ethereumTransaction.value ?? '0')),
+          //   data: hexToBytes(ethereumTransaction.data!),
+          //   maxFeePerGas: EtherAmount.fromBigInt(
+          //     EtherUnit.wei,
+          //     gasOptions[1].maxFeePerGas,
+          //   ),
+          //   maxPriorityFeePerGas: EtherAmount.fromBigInt(
+          //     EtherUnit.wei,
+          //     gasOptions[1].maxPriorityFeePerGas,
+          //   ),
+          // );
 
-          final creds = EthPrivateKey.fromHex(privateKey);
-          final txhash = await _web3client.sendTransaction(
-            creds,
-            transaction,
-            chainId: _wcClient.chainId!,
-          );
-          debugPrint('txhash $txhash');
-          _wcClient.approveRequest<String>(
-            id: id,
-            result: txhash,
-          );
+          // final creds = EthPrivateKey.fromHex(privateKey);
+          // final txhash = await _web3client.sendTransaction(
+          //   creds,
+          //   transaction,
+          //   chainId: _wcClient.chainId!,
+          // );
+          // debugPrint('txhash $txhash');
+          // _wcClient.approveRequest<String>(
+          //   id: id,
+          //   result: nativeTokenTransaction,
+          // );
         } catch (e) {
           _wcClient.rejectRequest(id: id);
           ScaffoldMessenger.of(context).showSnackBar(
@@ -658,7 +665,7 @@ class _MyHomePageState extends State<MyHomePage> {
     required VoidCallback onReject,
   }) async {
     SimulationResponse response = await simulateTransaction(
-      selectedNetwork.toNetwork(),
+      selectedNetwork.toNetwork()!,
       EthereumAddress.fromHex(ethereumTransaction.from),
       _wcEthTxToWeb3Tx(ethereumTransaction),
     );
@@ -681,17 +688,64 @@ class _MyHomePageState extends State<MyHomePage> {
         deposit.add(response.changes![i]);
       }
     }
+    var network = selectedNetwork.toNetwork()!;
+    var client = await evm.getSafeConnection(network);
+    var credentials = key.createEthereumAccountFromHex(privateKey);
+    final transactionSpeed = GasOption.standard.multiplier;
+    var rawTransaction = token.transactionObjectForNativeTokenTransfer(
+      EthereumAddress.fromHex(ethereumTransaction.to!),
+      BigInt.parse(ethereumTransaction.value!),
+    );
+    BigInt? maxFeePerGas;
+    BigInt? maxPriorityFeePerGas;
+    EtherAmount? gasPrice;
+    var balance = await token.getBalance(
+      client,
+      credentials.address,
+    );
+    debugPrint("balance: $balance");
+    if (balance.getInWei <= BigInt.parse(ethereumTransaction.value!)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Insufficient Balance"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    if (network.isEip1559) {
+      var gasFee = await evm.getGasFee(client);
+      maxFeePerGas = gasFee[transactionSpeed].maxFeePerGas;
+      maxPriorityFeePerGas = gasFee[transactionSpeed].maxPriorityFeePerGas;
+    } else {
+      gasPrice = await evm.getGasPrice(client);
+    }
+    rawTransaction = evm.updateGasOptions(rawTransaction, null,
+        gasPrice?.getInWei, maxFeePerGas, maxPriorityFeePerGas, null);
+
+    var estimatedGas = await evm.estimateGas(client, rawTransaction);
+    debugPrint("estimatedGas: $estimatedGas");
+
+    var nonce = await evm.getNonce(client, credentials.address);
+    debugPrint("nonce: $nonce");
+
+    rawTransaction = evm.updateGasOptions(
+        rawTransaction, estimatedGas.toInt(), null, null, null, nonce);
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => ReviewTransaction(
           ethereumTransaction: ethereumTransaction,
-          onConfirm: onConfirm,
-          onReject: onReject,
           title: title,
           response: response,
           withdraw: withdraw,
           deposit: deposit,
+          client: client,
+          network: network,
+          credentials: credentials,
+          transaction: rawTransaction,
+          wcClient: _wcClient,
+          id: id,
         ),
       ),
     );

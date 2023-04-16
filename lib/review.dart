@@ -4,25 +4,35 @@ import 'package:flutter/material.dart';
 import 'package:wallet_connect/wallet_connect.dart';
 import 'package:web3dart/web3dart.dart';
 import 'simulation.dart';
+import 'utils/constants/network.dart';
+import '../utils/services/evm/core/main.service.dart' as evm;
 
 // ignore: must_be_immutable
 class ReviewTransaction extends StatefulWidget {
   WCEthereumTransaction ethereumTransaction;
-  VoidCallback onConfirm;
-  VoidCallback onReject;
   SimulationResponse response;
   String title;
   List<SimulationResponseChanges> withdraw;
   List<SimulationResponseChanges> deposit;
+  Transaction transaction;
+  Web3Client client;
+  Network network;
+  Credentials credentials;
+  WCClient wcClient;
+  int id;
   ReviewTransaction({
     super.key,
     required this.ethereumTransaction,
-    required this.onConfirm,
-    required this.onReject,
     required this.title,
     required this.response,
     required this.withdraw,
     required this.deposit,
+    required this.transaction,
+    required this.client,
+    required this.network,
+    required this.credentials,
+    required this.wcClient,
+    required this.id,
   });
 
   @override
@@ -122,8 +132,8 @@ class _ReviewTransactionState extends State<ReviewTransaction> {
                                         radius: 25,
                                         child: Image(
                                           image: NetworkImage(
-                                              widget.withdraw[index].logo ??
-                                                  ""),
+                                            widget.withdraw[index].logo ?? "",
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(
@@ -382,7 +392,10 @@ class _ReviewTransactionState extends State<ReviewTransaction> {
                           ),
                         ),
                       ),
-                      onPressed: widget.onReject,
+                      onPressed: () {
+                        widget.wcClient.rejectRequest(id: widget.id);
+                        Navigator.pop(context);
+                      },
                       child: const Padding(
                         padding: EdgeInsets.symmetric(
                           horizontal: 5,
@@ -411,7 +424,20 @@ class _ReviewTransactionState extends State<ReviewTransaction> {
                           ),
                         ),
                       ),
-                      onPressed: widget.onConfirm,
+                      onPressed: () async {
+                        var nativeTokenTransaction = await evm.sendTransaction(
+                          widget.client,
+                          widget.network,
+                          widget.credentials,
+                          widget.transaction,
+                        );
+                        debugPrint("transaction: $nativeTokenTransaction");
+                        widget.wcClient.approveRequest(
+                          id: widget.id,
+                          result: nativeTokenTransaction,
+                        );
+                        Navigator.pop(context);
+                      },
                       child: const Padding(
                         padding: EdgeInsets.symmetric(
                           horizontal: 5,

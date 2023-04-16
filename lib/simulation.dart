@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'network.dart';
+import 'utils/constants/network.dart';
 import 'package:convert/convert.dart';
 import 'package:http/http.dart' as http;
 import 'package:web3dart/crypto.dart';
