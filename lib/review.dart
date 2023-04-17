@@ -425,18 +425,30 @@ class _ReviewTransactionState extends State<ReviewTransaction> {
                         ),
                       ),
                       onPressed: () async {
-                        var nativeTokenTransaction = await evm.sendTransaction(
-                          widget.client,
-                          widget.network,
-                          widget.credentials,
-                          widget.transaction,
-                        );
-                        debugPrint("transaction: $nativeTokenTransaction");
-                        widget.wcClient.approveRequest(
-                          id: widget.id,
-                          result: nativeTokenTransaction,
-                        );
-                        Navigator.pop(context);
+                        try {
+                          var nativeTokenTransaction =
+                              await evm.sendTransaction(
+                            widget.client,
+                            widget.network,
+                            widget.credentials,
+                            widget.transaction,
+                          );
+                          debugPrint("transaction: $nativeTokenTransaction");
+                          widget.wcClient.approveRequest(
+                            id: widget.id,
+                            result: nativeTokenTransaction,
+                          );
+                        } catch (e) {
+                          widget.wcClient.rejectRequest(id: widget.id);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: Colors.red,
+                              content: Text("Failed: ${e.toString()}"),
+                            ),
+                          );
+                        } finally {
+                          Navigator.pop(context);
+                        }
                       },
                       child: const Padding(
                         padding: EdgeInsets.symmetric(

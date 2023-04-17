@@ -43,7 +43,7 @@ Future<SimulationResponse> simulateTransaction(
         from: from.toString(),
         to: transaction.to.toString(),
         value: transaction.value != null ? "0x$value" : null,
-        data: transaction.data!.isNotEmpty
+        data: transaction.data != null
             ? bytesToHex(transaction.data as List<int>, include0x: true)
             : null,
         gas: transaction.maxGas != null ? "0x$gas" : null,
