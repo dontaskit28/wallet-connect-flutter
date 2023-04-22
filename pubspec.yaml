@@ -48,6 +48,7 @@ dependencies:
   dart_bip32_bip44: ^0.2.0
   ens_dart: ^1.0.0
   ntcdcrypto: ^0.2.0
+  wallet_connect_v2: ^1.0.3
 
 dev_dependencies:
   flutter_test:

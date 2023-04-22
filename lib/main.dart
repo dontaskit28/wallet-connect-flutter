@@ -19,6 +19,7 @@ import '../utils/services/evm/token.service.dart' as token;
 import 'review.dart';
 import 'widgets/session_request.dart';
 import 'widgets/sign_message.dart';
+import 'package:wallet_connect_v2/wallet_connect_v2.dart';
 
 void main() {
   runApp(const MyApp());
@@ -50,7 +51,7 @@ class MyHomePage extends StatefulWidget {
 
 const rpcUri = 'https://goerli.infura.io/v3/04487b56429746eda260c75599f9747a';
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   late WCClient _wcClient;
   late SharedPreferences _prefs;
   late String privateKey;
